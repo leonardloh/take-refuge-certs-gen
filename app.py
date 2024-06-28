@@ -66,7 +66,7 @@ if uploaded_file is not None:
 
     if st.button("Generate PDFs"):
         template_pdf = "内页2_resized.pdf"  # Ensure this file is in the same directory as your script
-        font_path = "font/Kaiti-SC-Bold.ttf"  # Ensure this file is in the same directory as your script
+        font_path = "font/Kaiti-TC-Bold.ttf"  # Ensure this file is in the same directory as your script
         
         formatted_date = date.strftime("%Y年%m月%d日")
         
