@@ -54,7 +54,7 @@ def generate_pdfs(df, date, template_pdf, font_path):
         output_files.append(output_pdf)
     return output_files
 
-st.title("皈依证 PDF Generator App")
+st.title("PDF Generator App")
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 date = st.date_input("Select a date")
@@ -82,7 +82,7 @@ if uploaded_file is not None:
         output_files = generate_pdfs(df_filtered, formatted_date, template_pdf, font_path)
         
         # Create a zip file containing all generated PDFs
-        zip_filename = f"generated_pdfs_{selected_location}.zip"
+        zip_filename = "generated_pdfs.zip"
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for file in output_files:
                 zipf.write(file)
