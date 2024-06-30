@@ -54,7 +54,7 @@ def generate_pdfs(df, date, template_pdf, font_path):
         output_files.append(output_pdf)
     return output_files
 
-st.title("PDF Generator App")
+st.title("皈依证 PDF Generator App")
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 date = st.date_input("Select a date")
