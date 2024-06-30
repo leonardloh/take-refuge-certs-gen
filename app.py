@@ -10,7 +10,7 @@ import zipfile
 import os
 
 def add_textboxes_to_pdf(input_pdf, output_pdf, texts, date, font_path, font_name, name_font_size, date_font_size, page_num=0):
-    coordinates = [(170, 355), (170, 90), (149, 50)]
+    coordinates = [(160, 355), (160, 90), (149, 50)]
     pdfmetrics.registerFont(TTFont(font_name, font_path))
     
     packet = io.BytesIO()
@@ -54,26 +54,35 @@ def generate_pdfs(df, date, template_pdf, font_path):
         output_files.append(output_pdf)
     return output_files
 
-st.title("皈依证 Generator App")
+st.title("皈依证 PDF Generator App")
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 date = st.date_input("Select a date")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    df_filtered = df[df['法名'].notna()][['中文姓名 Chinese Name','法名']]
-    st.write(f"Loaded {len(df_filtered)} valid entries")
+    
+    # Get unique locations from the CSV
+    location_column = "我要参与的地点：（请选择一个）"
+    locations = df[location_column].unique().tolist()
+    
+    # Create a dropdown for location selection
+    selected_location = st.selectbox("Select a location", locations)
+    
+    # Filter the dataframe based on selected location and valid entries
+    df_filtered = df[(df[location_column] == selected_location) & (df['法名'].notna())][['中文姓名 Chinese Name','法名']]
+    st.write(f"Loaded {len(df_filtered)} valid entries for {selected_location}")
 
     if st.button("Generate PDFs"):
-        template_pdf = "内页2_resized.pdf"  # Ensure this file is in the same directory as your script
-        font_path = "font/Kaiti-TC-Bold.ttf"  # Ensure this file is in the same directory as your script
+        template_pdf = "sy_template.pdf"  # Ensure this file is in the same directory as your script
+        font_path = "font/Kaiti-SC-Bold.ttf"  # Ensure this file is in the same directory as your script
         
         formatted_date = date.strftime("%Y年%m月%d日")
         
         output_files = generate_pdfs(df_filtered, formatted_date, template_pdf, font_path)
         
         # Create a zip file containing all generated PDFs
-        zip_filename = "generated_pdfs.zip"
+        zip_filename = f"generated_pdfs_{selected_location}.zip"
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for file in output_files:
                 zipf.write(file)
@@ -90,4 +99,4 @@ if uploaded_file is not None:
             )
         
         os.remove(zip_filename)  # Remove the zip file after offering download
-        st.success(f"Generated {len(output_files)} PDFs. Click the button above to download.")
+        st.success(f"Generated {len(output_files)} PDFs for {selected_location}. Click the button above to download.")
