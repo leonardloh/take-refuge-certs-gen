@@ -74,7 +74,7 @@ if uploaded_file is not None:
     st.write(f"Loaded {len(df_filtered)} valid entries for {selected_location}")
 
     if st.button("Generate PDFs"):
-        template_pdf = "sy_template.pdf"  # Ensure this file is in the same directory as your script
+        template_pdf = "内页2_resized.pdf"  # Ensure this file is in the same directory as your script
         font_path = "font/Kaiti-SC-Bold.ttf"  # Ensure this file is in the same directory as your script
         
         formatted_date = date.strftime("%Y年%m月%d日")
