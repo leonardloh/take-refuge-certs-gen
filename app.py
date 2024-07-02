@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A5, landscape
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import zipfile
@@ -14,7 +14,7 @@ def add_textboxes_to_pdf(input_pdf, output_pdf, texts, date, font_path, font_nam
     pdfmetrics.registerFont(TTFont(font_name, font_path))
     
     packet = io.BytesIO()
-    can = canvas.Canvas(packet, pagesize=letter)
+    can = canvas.Canvas(packet, pagesize=A5)
     
     for text, (x, y) in zip(texts, coordinates[:2]):
         can.setFont(font_name, name_font_size)
@@ -42,7 +42,27 @@ def add_textboxes_to_pdf(input_pdf, output_pdf, texts, date, font_path, font_nam
         with open(output_pdf, "wb") as output_stream:
             output.write(output_stream)
 
-def generate_pdfs(df, date, template_pdf, font_path):
+def create_blank_pdf_with_text(output_pdf, texts, date, font_path, font_name, name_font_size, date_font_size):
+    coordinates = [(160, 355), (160, 90), (149, 50)]
+    pdfmetrics.registerFont(TTFont(font_name, font_path))
+    
+    packet = io.BytesIO()
+    can = canvas.Canvas(packet, pagesize=landscape(A5))
+    
+    for text, (x, y) in zip(texts, coordinates[:2]):
+        can.setFont(font_name, name_font_size)
+        can.drawString(x, y, text)
+    
+    can.setFont(font_name, date_font_size)
+    can.drawString(coordinates[2][0], coordinates[2][1], date)
+    
+    can.save()
+    packet.seek(0)
+
+    with open(output_pdf, "wb") as output_stream:
+        output_stream.write(packet.getvalue())
+
+def generate_pdfs(df, date, template_pdf, font_path, use_blank_template):
     output_files = []
     for index, row in df.iterrows():
         chinese_name = row['中文姓名 Chinese Name']
@@ -50,7 +70,10 @@ def generate_pdfs(df, date, template_pdf, font_path):
         texts = [chinese_name, dharma_name]
         
         output_pdf = f"output_{chinese_name}_{dharma_name}.pdf"
-        add_textboxes_to_pdf(template_pdf, output_pdf, texts, date, font_path, "Kaiti-Bold", 16, 11)
+        if use_blank_template:
+            create_blank_pdf_with_text(output_pdf, texts, date, font_path, "Kaiti-Bold", 16, 11)
+        else:
+            add_textboxes_to_pdf(template_pdf, output_pdf, texts, date, font_path, "Kaiti-Bold", 16, 11)
         output_files.append(output_pdf)
     return output_files
 
@@ -58,37 +81,33 @@ st.title("皈依证 PDF Generator App")
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 date = st.date_input("Select a date")
+use_blank_template = st.checkbox("Use blank template (⚠️：若要打印名字在已盖章的皈依证内页，才选择这个)")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
-    # Get unique locations from the CSV
     location_column = "我要参与的地点：（请选择一个）"
     locations = df[location_column].unique().tolist()
     
-    # Create a dropdown for location selection
     selected_location = st.selectbox("Select a location", locations)
     
-    # Filter the dataframe based on selected location and valid entries
     df_filtered = df[(df[location_column] == selected_location) & (df['法名'].notna())][['中文姓名 Chinese Name','法名']]
     st.write(f"Loaded {len(df_filtered)} valid entries for {selected_location}")
 
     if st.button("Generate PDFs"):
-        template_pdf = "内页2_resized.pdf"  # Ensure this file is in the same directory as your script
+        template_pdf = "内页2_resized.pdf"
         font_path = "font/Kaiti-SC-Bold.ttf"  # Ensure this file is in the same directory as your script
         
         formatted_date = date.strftime("%Y年%m月%d日")
         
-        output_files = generate_pdfs(df_filtered, formatted_date, template_pdf, font_path)
+        output_files = generate_pdfs(df_filtered, formatted_date, template_pdf, font_path, use_blank_template)
         
-        # Create a zip file containing all generated PDFs
         zip_filename = "generated_pdfs.zip"
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for file in output_files:
                 zipf.write(file)
                 os.remove(file)  # Remove individual PDF files after adding to zip
         
-        # Offer the zip file for download
         with open(zip_filename, "rb") as f:
             bytes = f.read()
             st.download_button(
@@ -99,4 +118,5 @@ if uploaded_file is not None:
             )
         
         os.remove(zip_filename)  # Remove the zip file after offering download
-        st.success(f"Generated {len(output_files)} PDFs for {selected_location}. Click the button above to download.")
+        template_type = "blank (Landscape)" if use_blank_template else "original"
+        st.success(f"Generated {len(output_files)} PDFs for {selected_location} using {template_type} template. Click the button above to download.")
